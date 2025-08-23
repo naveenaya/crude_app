@@ -1,59 +1,45 @@
 ?php
 require 'db.php';
 
-// (Optional) Protect page if using login
-// if (!isset($_SESSION['user_id'])) {
-//     header('Location: login.php');
-//     exit;
-// }
-
-$perPage = 5; // posts per page
-$search  = isset($_GET['search']) ? trim($_GET['search']) : '';
-$page    = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+$perPage = 5; // number of posts per page
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
 
-// ----- COUNT TOTAL POSTS -----
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+
+// ------------------ COUNT TOTAL POSTS ------------------
 if ($search !== '') {
-    $sqlCount = "SELECT COUNT(*) AS total FROM posts
-                 WHERE title LIKE ? OR content LIKE ?";
+    $sqlCount = "SELECT COUNT(*) AS total FROM posts WHERE title LIKE ? OR content LIKE ?";
     $stmt = $conn->prepare($sqlCount);
-    $like = "%{$search}%";
+    $like = "%$search%";
     $stmt->bind_param("ss", $like, $like);
 } else {
     $sqlCount = "SELECT COUNT(*) AS total FROM posts";
     $stmt = $conn->prepare($sqlCount);
 }
 $stmt->execute();
-$countRes = $stmt->get_result()->fetch_assoc();
-$totalRows = (int)($countRes['total'] ?? 0);
+$totalRows = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
 $stmt->close();
 
-$totalPages = max(1, (int)ceil($totalRows / $perPage));
+$totalPages = max(1, ceil($totalRows / $perPage));
 if ($page > $totalPages) $page = $totalPages;
 
 $offset = ($page - 1) * $perPage;
 
-// ----- FETCH POSTS -----
+// ------------------ FETCH POSTS ------------------
 if ($search !== '') {
-    $sql = "SELECT id, title, content, created_at
-            FROM posts
-            WHERE title LIKE ? OR content LIKE ?
-            ORDER BY created_at DESC
-            LIMIT ? OFFSET ?";
+    $sql = "SELECT * FROM posts WHERE title LIKE ? OR content LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("ssii", $like, $like, $perPage, $offset);
 } else {
-    $sql = "SELECT id, title, content, created_at
-            FROM posts
-            ORDER BY created_at DESC
-            LIMIT ? OFFSET ?";
+    $sql = "SELECT * FROM posts ORDER BY created_at DESC LIMIT ? OFFSET ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("ii", $perPage, $offset);
 }
 $stmt->execute();
 $posts = $stmt->get_result();
 
-// Helper for pagination links
+// helper function for page links
 function pageLink($pageNum, $search) {
     $params = [];
     if ($search !== '') $params['search'] = $search;
@@ -127,4 +113,4 @@ function pageLink($pageNum, $search) {
   <?php endif; ?>
 </div>
 
-<?php include 'footer.php'
+<?php include 'footer.php'; ?>
