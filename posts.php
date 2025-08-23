@@ -1,7 +1,7 @@
-<?php
+?php
 require 'db.php';
 
-// (Optional) Protect the page if login is required
+// (Optional) Protect page if using login
 // if (!isset($_SESSION['user_id'])) {
 //     header('Location: login.php');
 //     exit;
@@ -12,7 +12,7 @@ $search  = isset($_GET['search']) ? trim($_GET['search']) : '';
 $page    = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 if ($page < 1) $page = 1;
 
-// ----- COUNT TOTAL -----
+// ----- COUNT TOTAL POSTS -----
 if ($search !== '') {
     $sqlCount = "SELECT COUNT(*) AS total FROM posts
                  WHERE title LIKE ? OR content LIKE ?";
@@ -53,7 +53,7 @@ if ($search !== '') {
 $stmt->execute();
 $posts = $stmt->get_result();
 
-// Helper function for pagination links
+// Helper for pagination links
 function pageLink($pageNum, $search) {
     $params = [];
     if ($search !== '') $params['search'] = $search;
@@ -67,23 +67,20 @@ function pageLink($pageNum, $search) {
 <div class="container">
   <h2 class="mb-4">📖 Blog Posts</h2>
 
-  <!-- Search Form -->
+  <!-- 🔎 Search Form -->
   <form class="row g-2 mb-4" method="get" action="posts.php">
     <div class="col-md-8">
-      <input
-        type="text"
-        name="search"
-        class="form-control"
-        placeholder="Search by title or content..."
-        value="<?= htmlspecialchars($search) ?>"
-      >
+      <input type="text" name="search" class="form-control" 
+             placeholder="🔍 Search by title or content..." 
+             value="<?= htmlspecialchars($search) ?>">
     </div>
     <div class="col-md-4 d-flex gap-2">
-      <button class="btn btn-primary" type="submit">🔍 Search</button>
-      <a class="btn btn-outline-secondary" href="posts.php">Reset</a>
+      <button class="btn btn-primary w-50" type="submit">Search</button>
+      <a class="btn btn-outline-secondary w-50" href="posts.php">Reset</a>
     </div>
   </form>
 
+  <!-- 📋 Post Display -->
   <?php if ($posts->num_rows === 0): ?>
     <div class="alert alert-info">No posts found.</div>
   <?php else: ?>
@@ -97,7 +94,7 @@ function pageLink($pageNum, $search) {
           <p class="card-text"><?= nl2br(htmlspecialchars($row['content'])) ?></p>
           <div class="d-flex gap-2">
             <a class="btn btn-sm btn-outline-primary" href="edit.php?id=<?= $row['id'] ?>">✏ Edit</a>
-            <a class="btn btn-sm btn-outline-danger" href="delete.php?id=<?= $row['id'] ?>"
+            <a class="btn btn-sm btn-outline-danger" href="delete.php?id=<?= $row['id'] ?>" 
                onclick="return confirm('Delete this post?');">🗑 Delete</a>
           </div>
         </div>
@@ -105,7 +102,7 @@ function pageLink($pageNum, $search) {
     <?php endwhile; ?>
   <?php endif; ?>
 
-  <!-- Pagination -->
+  <!-- 📌 Pagination -->
   <?php if ($totalPages > 1): ?>
   <nav aria-label="Posts pages">
     <ul class="pagination justify-content-center">
@@ -130,6 +127,4 @@ function pageLink($pageNum, $search) {
   <?php endif; ?>
 </div>
 
-<?php include 'footer.php'; ?>
-
-
+<?php include 'footer.php'
