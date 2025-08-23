@@ -1,13 +1,12 @@
-?php
+<?php
 require 'db.php';
 
-$perPage = 5; // number of posts per page
+$perPage = 5; // posts per page
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
 
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
-// ------------------ COUNT TOTAL POSTS ------------------
 if ($search !== '') {
     $sqlCount = "SELECT COUNT(*) AS total FROM posts WHERE title LIKE ? OR content LIKE ?";
     $stmt = $conn->prepare($sqlCount);
@@ -18,7 +17,8 @@ if ($search !== '') {
     $stmt = $conn->prepare($sqlCount);
 }
 $stmt->execute();
-$totalRows = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
+$result = $stmt->get_result();
+$totalRows = ($result && $result->num_rows > 0) ? $result->fetch_assoc()['total'] : 0;
 $stmt->close();
 
 $totalPages = max(1, ceil($totalRows / $perPage));
@@ -26,7 +26,6 @@ if ($page > $totalPages) $page = $totalPages;
 
 $offset = ($page - 1) * $perPage;
 
-// ------------------ FETCH POSTS ------------------
 if ($search !== '') {
     $sql = "SELECT * FROM posts WHERE title LIKE ? OR content LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?";
     $stmt = $conn->prepare($sql);
@@ -67,9 +66,7 @@ function pageLink($pageNum, $search) {
   </form>
 
   <!-- 📋 Post Display -->
-  <?php if ($posts->num_rows === 0): ?>
-    <div class="alert alert-info">No posts found.</div>
-  <?php else: ?>
+  <?php if (isset($posts) && $posts->num_rows > 0): ?>
     <?php while ($row = $posts->fetch_assoc()): ?>
       <div class="card mb-3 shadow-sm">
         <div class="card-body">
@@ -86,6 +83,8 @@ function pageLink($pageNum, $search) {
         </div>
       </div>
     <?php endwhile; ?>
+  <?php else: ?>
+    <div class="alert alert-info">No posts found.</div>
   <?php endif; ?>
 
   <!-- 📌 Pagination -->
