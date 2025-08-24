@@ -2,7 +2,6 @@
 session_start();
 include 'config.php';
 
-
 // Check if logged in
 if (!isset($_SESSION["username"])) {
     header("Location: login.php");
