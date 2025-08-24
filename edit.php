@@ -2,7 +2,7 @@
 /************ EDIT.PHP — FINAL VERSION ************/
 require 'protect.php';
 require_login();                          // must be logged in
-//require_role(['admin', 'editor']);        // only admin/editor allowed
+require_role(['admin', 'editor']);        // only admin/editor allowed
 
 // Ensure we have a valid post id
 $id = (int)($_GET['id'] ?? 0);
