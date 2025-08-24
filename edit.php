@@ -1,70 +1,82 @@
-<?php
-// include database connection
-include("config.php");
+?php
+require 'db.php';
 
-// fetch all posts from database
-$sql = "SELECT * FROM posts ORDER BY id DESC";
-$result = $conn->query($sql);
+$errors = [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $username = trim($_POST['username'] ?? '');
+  $password = trim($_POST['password'] ?? '');
+  $confirm  = trim($_POST['confirm']  ?? '');
+
+  // server-side validation
+  if ($username === '' || $password === '' || $confirm === '') {
+    $errors[] = 'All fields are required.';
+  } elseif (strlen($username) < 3) {
+    $errors[] = 'Username must be at least 3 characters.';
+  } elseif ($password !== $confirm) {
+    $errors[] = 'Passwords do not match.';
+  }
+
+  // unique username?
+  if (!$errors) {
+    $stmt = $conn->prepare('SELECT id FROM users WHERE username = ?');
+    $stmt->bind_param('s', $username);
+    $stmt->execute();
+    $stmt->store_result();
+    if ($stmt->num_rows > 0) {
+      $errors[] = 'Username is already taken.';
+    }
+    $stmt->close();
+  }
+
+  // create user
+  if (!$errors) {
+    $hash = password_hash($password, PASSWORD_DEFAULT);
+    $role = 'user'; // default role
+    $stmt = $conn->prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)');
+    $stmt->bind_param('sss', $username, $hash, $role);
+    $stmt->execute();
+    $stmt->close();
+
+    header('Location: login.php?registered=1');
+    exit;
+  }
+}
+include 'header.php';
 ?>
+<div class="container" style="max-width:540px">
+  <h3 class="mb-3">Create Account</h3>
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>View Posts</title>
-    <style>
-        table {
-            width: 80%;
-            border-collapse: collapse;
-            margin: 20px auto;
-        }
-        th, td {
-            padding: 10px;
-            border: 1px solid #333;
-            text-align: left;
-        }
-        th {
-            background: #f2f2f2;
-        }
-        a {
-            text-decoration: none;
-            color: blue;
-            margin: 0 5px;
-        }
-        a.delete {
-            color: red;
-        }
-    </style>
-</head>
-<body>
-    <h2 style="text-align:center;">All Posts</h2>
-    <table>
-        <tr>
-            <th>ID</th>
-            <th>Title</th>
-            <th>Content</th>
-            <th>Actions</th>
-        </tr>
-        <?php
-        if ($result->num_rows > 0) {
-            while($row = $result->fetch_assoc()) {
-                echo "<tr>";
-                echo "<td>".$row['id']."</td>";
-                echo "<td>".$row['title']."</td>";
-                echo "<td>".$row['content']."</td>";
-                echo "<td>
-                        <a href='edit.php?id=".$row['id']."'>Edit</a> | 
-                        <a href='delete.php?id=".$row['id']."' class='delete' onclick='return confirm(\"Are you sure you want to delete this post?\");'>Delete</a>
-                      </td>";
-                echo "</tr>";
-            }
-        } else {
-            echo "<tr><td colspan='4' style='text-align:center;'>No posts found</td></tr>";
-        }
-        ?>
-    </table>
-    <div style="text-align:center;">
-        <a href="create.php">+ Add New Post</a> | 
-        <a href="dashboard.php">⬅ Back to Dashboard</a>
+  <?php if ($errors): ?>
+    <div class="alert alert-danger"><?= implode('<br>', array_map('htmlspecialchars', $errors)) ?></div>
+  <?php endif; ?>
+
+  <form method="post" class="needs-validation" novalidate>
+    <div class="mb-3">
+      <label class="form-label">Username</label>
+      <input name="username" class="form-control" required minlength="3">
+      <div class="invalid-feedback">Enter a username (min 3 chars)</div>
     </div>
-</body>
-</html>
+    <div class="mb-3">
+      <label class="form-label">Password</label>
+      <input name="password" type="password" class="form-control" required minlength="6">
+      <div class="invalid-feedback">Enter a password (min 6 chars)</div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Confirm Password</label>
+      <input name="confirm" type="password" class="form-control" required minlength="6">
+      <div class="invalid-feedback">Re-enter the same password</div>
+    </div>
+    <button class="btn btn-primary">Register</button>
+    <a class="btn btn-link" href="login.php">Login</a>
+  </form>
+</div>
+<script>
+(() => {
+  const forms = document.querySelectorAll('.needs-validation');
+  Array.from(forms).forEach(form => form.addEventListener('submit', e => {
+    if (!form.checkValidity()) { e.preventDefault(); e.stopPropagation(); }
+    form.classList.add('was-validated');
+  }));
+})();
+</script>
+<?php include 'footer.php'; ?>
