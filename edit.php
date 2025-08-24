@@ -12,7 +12,7 @@ error_reporting(E_ALL);
     - db.php defines $conn (mysqli) and optionally an e() helper.
     - protect.php defines require_login() and require_role().
 */
-$root = _DIR_ . '/';
+$root = __DIR__. '/';
 
 if (!file_exists($root . 'db.php')) {
     http_response_code(500);
