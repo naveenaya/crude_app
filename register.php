@@ -1,5 +1,5 @@
 
-?php
+<?php
 require 'db.php';   // database connection
 $errors = [];       // always initialize error array
 
