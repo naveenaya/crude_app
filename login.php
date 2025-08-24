@@ -1,4 +1,4 @@
-?php
+<?php
 session_start();
 require 'db.php';   // database connection
 $errors = [];       // initialize error array
