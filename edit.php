@@ -1,4 +1,4 @@
-?php
+<?php
 /************ EDIT.PHP — FINAL VERSION ************/
 require 'protect.php';
 require_login();                          // must be logged in
