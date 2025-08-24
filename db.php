@@ -1,4 +1,4 @@
-?php
+<?php
 // db.php
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
@@ -12,3 +12,4 @@ if ($conn->connect_error) {
   die('Database connection failed: ' . $conn->connect_error);
 }
 $conn->set_charset('utf8mb4');
+?>
