@@ -1,82 +1,90 @@
-<?php
-require 'db.php';
+?php
+/************ EDIT.PHP — FINAL VERSION ************/
+require 'protect.php';
+require_login();                          // must be logged in
+require_role(['admin', 'editor']);        // only admin/editor allowed
+
+// Ensure we have a valid post id
+$id = (int)($_GET['id'] ?? 0);
+if ($id <= 0) {
+    header("Location: posts.php");
+    exit;
+}
+
+// Fetch the post
+$stmt = $conn->prepare("SELECT id, title, content, user_id FROM posts WHERE id = ?");
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$result = $stmt->get_result();
+$post = $result->fetch_assoc();
+$stmt->close();
+
+if (!$post) {
+    http_response_code(404);
+    echo "<h3>404 - Post not found</h3>";
+    exit;
+}
+
+// If editor, only allow editing their own posts
+if ($_SESSION['role'] === 'editor' && $_SESSION['user_id'] != $post['user_id']) {
+    http_response_code(403);
+    echo "<h3>403 - Forbidden</h3><p>Editors can only edit their own posts.</p>";
+    exit;
+}
 
 $errors = [];
+$title = $post['title'];
+$content = $post['content'];
+
+// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $username = trim($_POST['username'] ?? '');
-  $password = trim($_POST['password'] ?? '');
-  $confirm  = trim($_POST['confirm']  ?? '');
+    $title = trim($_POST['title'] ?? '');
+    $content = trim($_POST['content'] ?? '');
 
-  // server-side validation
-  if ($username === '' || $password === '' || $confirm === '') {
-    $errors[] = 'All fields are required.';
-  } elseif (strlen($username) < 3) {
-    $errors[] = 'Username must be at least 3 characters.';
-  } elseif ($password !== $confirm) {
-    $errors[] = 'Passwords do not match.';
-  }
-
-  // unique username?
-  if (!$errors) {
-    $stmt = $conn->prepare('SELECT id FROM users WHERE username = ?');
-    $stmt->bind_param('s', $username);
-    $stmt->execute();
-    $stmt->store_result();
-    if ($stmt->num_rows > 0) {
-      $errors[] = 'Username is already taken.';
+    if (strlen($title) < 3) {
+        $errors[] = "Title must be at least 3 characters.";
     }
-    $stmt->close();
-  }
+    if (strlen($content) < 10) {
+        $errors[] = "Content must be at least 10 characters.";
+    }
 
-  // create user
-  if (!$errors) {
-    $hash = password_hash($password, PASSWORD_DEFAULT);
-    $role = 'user'; // default role
-    $stmt = $conn->prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)');
-    $stmt->bind_param('sss', $username, $hash, $role);
-    $stmt->execute();
-    $stmt->close();
+    if (empty($errors)) {
+        $stmt = $conn->prepare("UPDATE posts SET title=?, content=? WHERE id=?");
+        $stmt->bind_param("ssi", $title, $content, $id);
+        $stmt->execute();
+        $stmt->close();
 
-    header('Location: login.php?registered=1');
-    exit;
-  }
+        header("Location: posts.php?updated=1");
+        exit;
+    }
 }
-include 'header.php';
 ?>
-<div class="container" style="max-width:540px">
-  <h3 class="mb-3">Create Account</h3>
 
-  <?php if ($errors): ?>
-    <div class="alert alert-danger"><?= implode('<br>', array_map('htmlspecialchars', $errors)) ?></div>
-  <?php endif; ?>
+<?php include 'header.php'; ?>
+<div class="container mt-5" style="max-width:720px;">
+    <h2 class="mb-4">Edit Post</h2>
 
-  <form method="post" class="needs-validation" novalidate>
-    <div class="mb-3">
-      <label class="form-label">Username</label>
-      <input name="username" class="form-control" required minlength="3">
-      <div class="invalid-feedback">Enter a username (min 3 chars)</div>
-    </div>
-    <div class="mb-3">
-      <label class="form-label">Password</label>
-      <input name="password" type="password" class="form-control" required minlength="6">
-      <div class="invalid-feedback">Enter a password (min 6 chars)</div>
-    </div>
-    <div class="mb-3">
-      <label class="form-label">Confirm Password</label>
-      <input name="confirm" type="password" class="form-control" required minlength="6">
-      <div class="invalid-feedback">Re-enter the same password</div>
-    </div>
-    <button class="btn btn-primary">Register</button>
-    <a class="btn btn-link" href="login.php">Login</a>
-  </form>
+    <?php if (!empty($errors)): ?>
+        <div class="alert alert-danger">
+            <?php foreach ($errors as $er): ?>
+                <p class="mb-0"><?php echo e($er); ?></p>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+
+    <form method="post" action="">
+        <div class="mb-3">
+            <label class="form-label">Title</label>
+            <input name="title" class="form-control" value="<?php echo e($title); ?>" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Content</label>
+            <textarea name="content" rows="6" class="form-control" required><?php echo e($content); ?></textarea>
+        </div>
+
+        <button class="btn btn-success">Update</button>
+        <a href="posts.php" class="btn btn-secondary">Cancel</a>
+    </form>
 </div>
-<script>
-(() => {
-  const forms = document.querySelectorAll('.needs-validation');
-  Array.from(forms).forEach(form => form.addEventListener('submit', e => {
-    if (!form.checkValidity()) { e.preventDefault(); e.stopPropagation(); }
-    form.classList.add('was-validated');
-  }));
-})();
-</script>
 <?php include 'footer.php'; ?>
